@@ -1,0 +1,9 @@
+# Ubisoft LAFAN1 takes are CC BY-NC-ND 4.0: converted copies must never be published.
+clips.ubisoft.json
+
+# Downloaded source recordings
+dl/
+*.bvh
+lafan1.zip
+
+.DS_Store
