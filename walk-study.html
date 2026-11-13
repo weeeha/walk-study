@@ -1,0 +1,607 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Character Walk Study</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: mocap volume. A dark capture stage with the take's footfall timeline under it and one flat control strip; characters, recorded takes and watch notes sit beside it as plain ruled lists. One look, dark only. */
+:root{
+  color-scheme:dark;
+  --bg:#151617; --surface:#1C1D1F; --raised:#2A2B2E; --stage:#0F1011; --floor:#191A1C; --floor-line:#565960;
+  --ink:#E8E6E1; --muted:#9E9C96; --line:#303236;
+  --accent:#E8E6E1; --accent-ink:#151617;
+  --left:#E0685F; --right:#5FBF7E; --clay:#96938D;
+  --font-display:"Archivo","Helvetica Neue",Arial,sans-serif;
+  --font-body:"IBM Plex Sans","Helvetica Neue",Arial,sans-serif;
+  --font-data:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+  --r:4px; --s1:4px; --s2:8px; --s3:12px; --s4:16px; --s5:24px; --s6:32px; --s7:48px;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%;scrollbar-color:var(--line) var(--bg)}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 var(--font-body)}
+::selection{background:var(--ink);color:var(--bg)}
+.wrap{max-width:1380px;margin:0 auto;padding-block:var(--s5) var(--s7);padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+header{display:flex;flex-direction:column;gap:var(--s1);margin-bottom:var(--s5)}
+h1{font:700 28px/1.15 var(--font-display);margin:0;text-wrap:balance}
+header p{margin:0;color:var(--muted);max-width:70ch}
+.grid{display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:var(--s6);align-items:start}
+.main{display:flex;flex-direction:column;gap:var(--s3);min-width:0}
+.stage{position:relative;width:100%;max-width:100%;aspect-ratio:16/10;background:var(--stage);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+@media (max-width:600px){.stage{aspect-ratio:4/3.4}}
+.stage canvas{display:block;width:100%;height:100%;touch-action:pan-y;cursor:grab}
+.stage canvas:active{cursor:grabbing}
+.tag{position:absolute;left:0;top:0;transform:translate(-50%,-100%);font:500 12px/1.2 var(--font-body);background:var(--raised);color:var(--ink);border-radius:var(--r);padding:var(--s1) var(--s2);white-space:nowrap;pointer-events:none}
+.status button{margin-top:var(--s3);min-height:36px;padding:0 var(--s4);border:1px solid var(--muted);border-radius:var(--r);background:transparent;color:var(--ink);cursor:pointer}
+.status{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:var(--s5);text-align:center;color:var(--muted)}
+.bar{display:flex;flex-wrap:wrap;gap:var(--s2) var(--s4);align-items:center}
+button,select{font:inherit;color:inherit}
+.primary{min-height:36px;min-width:88px;padding:0 var(--s4);border:0;border-radius:var(--r);background:var(--accent);color:var(--accent-ink);font-weight:600;cursor:pointer}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.seg button{min-height:34px;min-width:42px;padding:0 var(--s3);border:0;background:transparent;cursor:pointer;color:var(--muted)}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button:hover{background:var(--surface)}
+.seg button[aria-pressed="true"]{background:var(--raised);color:var(--ink)}
+.chk{display:inline-flex;align-items:center;gap:var(--s1);min-height:34px;cursor:pointer;color:var(--ink)}
+.chk input{appearance:none;-webkit-appearance:none;position:relative;width:24px;height:24px;margin:0 0 0 calc(-1*var(--s1));background:transparent;border-radius:var(--r);cursor:pointer}
+.chk input::before{content:"";position:absolute;inset:var(--s1);border:1.5px solid var(--muted);border-radius:var(--r)}
+.chk input:checked::before{background:var(--ink);border-color:var(--ink)}
+.chk input:checked::after{content:"";position:absolute;left:9px;top:6px;width:5px;height:9px;border:solid var(--bg);border-width:0 2px 2px 0;transform:rotate(45deg)}
+[hidden]{display:none!important}
+.chk.off,.chk.off input{color:var(--muted);cursor:default}
+.chk.off input::before{background:transparent;border-color:var(--line)}
+.chk.off input::after{display:none}
+.sel{display:inline-flex;align-items:center;gap:var(--s2);flex-wrap:wrap}
+.sel select{min-height:34px;max-width:100%;padding:0 var(--s2);border:1px solid var(--line);border-radius:var(--r);background:var(--bg)}
+:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+.chart{display:flex;flex-direction:column;gap:var(--s2);padding-top:var(--s4);margin-top:var(--s2);border-top:1px solid var(--line)}
+h2{font:700 18px/1.25 var(--font-display);margin:0}
+#gait{display:block;width:100%;height:112px;cursor:ew-resize;touch-action:pan-y}
+.legend{font-size:13px;color:var(--muted);margin:0;max-width:75ch}
+.metrics{display:flex;flex-wrap:wrap;gap:var(--s2) var(--s5);margin:var(--s2) 0 0}
+.metrics div{display:flex;flex-direction:column;min-width:0}
+.metrics dt{font-size:13px;color:var(--muted)}
+.metrics dd{margin:0;font:500 15px/1.4 var(--font-data);font-variant-numeric:tabular-nums}
+aside{display:flex;flex-direction:column;gap:var(--s6);min-width:0}
+aside h2{margin-bottom:var(--s2)}
+.rows{display:flex;flex-direction:column;border-top:1px solid var(--line);min-height:40px}
+.style-btn,.clip-btn{width:100%;text-align:left;border:0;border-bottom:1px solid var(--line);border-radius:0;background:transparent;cursor:pointer;padding:var(--s3)}
+.style-btn{display:flex;flex-direction:column;align-items:flex-start;gap:var(--s1)}
+.style-btn strong{font-weight:600}
+.style-btn span{font-size:13px;color:var(--muted)}
+.clip-btn{display:flex;justify-content:space-between;align-items:baseline;gap:var(--s3);min-height:40px;padding-block:var(--s2)}
+.clip-btn span{font:400 12px/1.4 var(--font-data);color:var(--muted);white-space:nowrap}
+.style-btn:hover,.clip-btn:hover{background:var(--surface)}
+.style-btn[aria-pressed="true"],.clip-btn[aria-pressed="true"]{background:var(--raised)}
+.notes{display:flex;flex-direction:column;gap:var(--s3)}
+.notes h2{margin:0}
+.notes .lede{margin:0;color:var(--muted)}
+.cues{display:grid;grid-template-columns:64px minmax(0,1fr);gap:var(--s2) var(--s3);margin:0}
+.cues dt{color:var(--muted)}
+.cues dd{margin:0}
+.notes h3{font:600 15px/1.3 var(--font-body);margin:var(--s4) 0 0}
+.notes p{margin:0;max-width:65ch}
+.credit{font-size:13px;color:var(--muted)}
+@media (max-width:960px){.grid{grid-template-columns:minmax(0,1fr);gap:var(--s4)}.main,aside{display:contents}.stage{order:1}#hint{order:2}.bar{order:3}#who{order:4}#takes{order:5}.chart{order:6}.notes{order:7}}
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Character walk study</h1>
+    <p>Real motion capture of actors walking in character. Pick a character and a take, slow it down, and copy what the body does. Drag the stage to look from any angle.</p>
+  </header>
+
+  <div class="grid">
+    <div class="main">
+      <div class="stage" id="stage">
+        <canvas id="view" aria-label="3D figure replaying a recorded walk on a floor marked every 25 cm"></canvas>
+        <div id="tags"></div>
+        <div class="status" id="status">Loading the recorded clips.</div>
+      </div>
+      <p class="legend" id="hint">Space plays or pauses. Arrow keys step one frame while paused. Floor lines are 25 cm apart.</p>
+
+      <div class="bar">
+        <button id="play" class="primary" type="button">Pause</button>
+        <div class="seg" role="group" aria-label="Playback speed">
+          <button type="button" data-speed="1" aria-pressed="true">1×</button>
+          <button type="button" data-speed="0.5" aria-pressed="false">½×</button>
+          <button type="button" data-speed="0.25" aria-pressed="false">¼×</button>
+        </div>
+        <div class="seg" role="group" aria-label="Camera view">
+          <button type="button" data-view="side" aria-pressed="true">Side</button>
+          <button type="button" data-view="front" aria-pressed="false">Front</button>
+          <button type="button" data-view="three" aria-pressed="false" aria-label="Three-quarter view" title="Three-quarter view">¾</button>
+          <button type="button" data-view="top" aria-pressed="false">Top</button>
+        </div>
+        <label class="chk"><input type="checkbox" id="fp" checked> Foot marks</label>
+        <label class="chk"><input type="checkbox" id="tr"> Trails</label>
+        <label class="chk"><input type="checkbox" id="snd"> Step sound</label>
+        <label class="chk" id="prl"><input type="checkbox" id="pr" checked> Props</label>
+        <label class="sel" for="cmp">Compare with
+          <select id="cmp"><option value="">Nobody</option></select>
+        </label>
+      </div>
+
+      <section class="chart" aria-labelledby="gait-h">
+        <h2 id="gait-h">Footfalls in this take</h2>
+        <canvas id="gait" aria-label="Timeline of the take showing when each foot is on the ground. Click or drag to scrub."></canvas>
+        <p class="legend">Each bar is one foot on the ground. Gaps are that foot in the air. Even spacing means a steady rhythm. Click or drag to scrub.</p>
+        <dl class="metrics" id="metrics"></dl>
+        <p class="legend">Measured from this take with the body scaled to about 1.75 m. Treat the numbers as approximate.</p>
+      </section>
+    </div>
+
+    <aside>
+      <section id="who" aria-labelledby="who-h">
+        <h2 id="who-h">Characters</h2>
+        <div id="groupList" class="rows"></div>
+      </section>
+      <section id="takes" aria-labelledby="take-h">
+        <h2 id="take-h">Recorded takes</h2>
+        <div id="clipList" class="rows"></div>
+      </section>
+      <section class="notes" id="notes" aria-live="polite"></section>
+    </aside>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.149.0/build/three.min.js"></script>
+<script>
+(function(){
+"use strict";
+const DEG=Math.PI/180;
+const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
+const V3=(x=0,y=0,z=0)=>new THREE.Vector3(x,y,z), Y=V3(0,1,0);
+
+/* ---------- Characters: what to watch for in the recorded takes ---------- */
+const GROUPS={
+  baseline:{name:"Everyday adult",short:"Neutral reference walks.",
+    lede:"Your control take. Every other character is a set of changes from this.",
+    cues:[["Feet","Heel lands first, the foot rolls flat, then pushes off the toes. Feet track about hip width apart."],
+      ["Knees","Nearly straight as the heel lands, soft while standing on that leg, folding as it swings through."],
+      ["Hips","Turn a little with each leg and shift onto the standing foot."],
+      ["Torso","Upright. The chest turns gently against the hips."],
+      ["Arms","Swing opposite the legs, elbows slightly bent."],
+      ["Head","Level, eyes ahead."]],
+    watch:"Your own habits. Film yourself doing this one first so you know what you bring to every other character.",
+    practice:"Turn on Step sound and walk until your heel strikes land on the clicks without thinking about it."},
+  elderly:{name:"Elderly",short:"Four takes of old age.",
+    lede:"Compare the takes. They show different versions of old: stooped, shuffling, or leaning on a stick.",
+    cues:[["Feet","Short steps that barely leave the floor and land nearly flat, often set wide."],
+      ["Knees","Stay a little bent. Look for how little push-off there is from the back foot."],
+      ["Hips","Hardly turn. The body rocks side to side to get the weight over each foot."],
+      ["Torso","Stooped forward, shoulders rounded."],
+      ["Arms","Small swing, elbows bent, hands held a little forward for balance."],
+      ["Head","Pushed forward of the shoulders, eyes on the floor ahead."]],
+    watch:"Playing pain or a limp. Old age reads as caution, so keep it smooth and slow instead of broken.",
+    practice:"At ¼×, copy only the weight shift for a minute: move over the front foot, settle, then lift the back one."},
+  young:{name:"Young",short:"Teen, bouncy and upbeat walks.",
+    lede:"Energy and spring. Watch how much the head rises and falls compared with the everyday walk.",
+    cues:[["Feet","Longer steps, a clear heel strike and a strong push off the toes."],
+      ["Knees","The swinging knee folds high and the leg reaches long in front."],
+      ["Hips","Loose, turning more than in the adult walk."],
+      ["Torso","Upright or a touch back, chest open, shoulders swinging against the hips."],
+      ["Arms","Big and loose. In the gangly take the limbs seem a beat behind the body."],
+      ["Head","Up and bobbing with the bounce, free to look around."]],
+    watch:"Stomping. The spring comes from the push-off at the back foot, not from landing hard at the front.",
+    practice:"Turn on Trails and match the wave the head draws. Compare it with Everyday adult to see the size of the bounce."},
+  operator:{name:"Tactical, armed",short:"Moving with a weapon, plus crouched and careful walks.",
+    lede:"In SWAT style the performer mimes a rifle. No weapon was recorded, so the one shown is drawn from the hands.",
+    ledeUbisoft:"The two Ubisoft takes are actors moving while holding and aiming a gun. The weapon was not recorded, so the one shown is drawn from the hands: a long gun for actor 1, a handgun for actor 2. In SWAT style the performer mimes a rifle.",
+    cues:[["Feet","Heel to toe roll, each foot placed, stance a little wider than the hips. Watch for side steps and backing up without crossing the feet."],
+      ["Knees","Bent the whole time. They absorb the step so nothing above the hips bobs."],
+      ["Hips","Low and level. They carry the upper body like a platform."],
+      ["Torso","Leaning forward, chest square to where the weapon points."],
+      ["Arms","No swing. Both hands stay locked together in front of the chest and move as one unit."],
+      ["Head","Still. Head and hands turn together, and the legs follow afterwards."]],
+    watch:"Bouncing, and letting the hands drift apart. With Trails on, the head line should be much flatter than in any other character.",
+    practice:"At ½× with Trails on, walk holding a full cup at chest height with both hands. Spill nothing."},
+  erratic:{name:"Unstable, agitated",short:"Drunk, angry, scared, start and stop.",
+    lede:"These sources have no take of an unstable person with a gun. These are the nearest real takes to mix it from.",
+    cues:[["Rhythm","Start and stop gives the broken timing. Look at how uneven the bars are in the footfall chart."],
+      ["Feet","Drunk gives the weave and the wide, catching steps."],
+      ["Torso","Scared gives the hunch and the raised shoulders. Angry gives the forward drive."],
+      ["Head","Being followed gives the quick looks back over the shoulder."],
+      ["Arms","Take the gun handling from the Tactical takes, then loosen it: one hand, drifting aim."]],
+    watch:"Playing it big. Wild gestures read as comedy. Keep each move short and let the pauses do the work.",
+    practice:"Pick two takes, such as Start and stop for the legs and Scared for the upper body, and layer them. Use Compare to see both at once."}
+};
+const ORDER=["baseline","elderly","young","operator","erratic"];
+const srcTag=s=>s.startsWith("100STYLE")?"100STYLE":s.startsWith("CMU")?"CMU":"Ubisoft";
+
+/* ---------- Helpers ---------- */
+function b64(s){const b=atob(s),u=new Uint8Array(b.length);for(let i=0;i<b.length;i++)u[i]=b.charCodeAt(i);return u.buffer;}
+function basisQ(x,up){
+  x=x.clone().normalize();const z=new THREE.Vector3().crossVectors(x,up);
+  if(z.lengthSq()<1e-4) z.crossVectors(x,V3(1,0,0));
+  if(z.lengthSq()<1e-4) z.crossVectors(x,V3(0,0,1));
+  z.normalize();const y=new THREE.Vector3().crossVectors(z,x);
+  return new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().makeBasis(x,y,z));
+}
+const _d=V3();
+function placeSeg(m,a,b){
+  m.position.copy(a).add(b).multiplyScalar(.5);_d.copy(b).sub(a);
+  if(_d.lengthSq()<1e-8)return;m.quaternion.setFromUnitVectors(Y,_d.normalize());
+}
+
+/* ---------- Scene ---------- */
+const stageEl=document.getElementById("stage"), canvas=document.getElementById("view"), statusEl=document.getElementById("status");
+let renderer;
+try{renderer=new THREE.WebGLRenderer({canvas,antialias:true});}
+catch(err){statusEl.textContent="This browser could not start 3D graphics, so the takes cannot be shown here. Try another browser or turn on hardware acceleration.";return;}
+renderer.setPixelRatio(Math.min(2,window.devicePixelRatio||1));
+renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+const scene=new THREE.Scene();
+const camera=new THREE.PerspectiveCamera(32,1.6,.1,60);
+scene.add(new THREE.HemisphereLight(0xffffff,0x8a8f94,.85));
+const sun=new THREE.DirectionalLight(0xffffff,.8);sun.position.set(2.5,5,3.5);sun.castShadow=true;
+sun.shadow.mapSize.set(1024,1024);Object.assign(sun.shadow.camera,{left:-3.5,right:3.5,top:3.5,bottom:-3.5,near:.5,far:15});
+scene.add(sun);
+const mats=[new THREE.MeshStandardMaterial({roughness:.75}),new THREE.MeshStandardMaterial({roughness:.75}),
+  new THREE.MeshStandardMaterial({roughness:.75}),new THREE.MeshStandardMaterial({roughness:.5}),new THREE.MeshStandardMaterial({roughness:.6}),new THREE.MeshStandardMaterial({roughness:.45})];
+const SPH=new THREE.SphereGeometry(1,24,16);
+const _a=V3(),_b=V3(),_c=V3(),_e=V3();
+function placeFrom(m,a,b){m.position.copy(a);_d.copy(b).sub(a);if(_d.lengthSq()<1e-8)return;m.quaternion.setFromUnitVectors(Y,_d.normalize());}
+function frameQ(left,up){ /* X = body left, Y = up, Z = forward */
+  const y=up.clone().normalize(),x=left.clone().addScaledVector(y,-left.dot(y)).normalize(),z=new THREE.Vector3().crossVectors(x,y);
+  return new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().makeBasis(x,y,z));}
+function limbGeo(len,r0,rm,r1){ /* tapered surface of revolution along +Y, starting at the joint */
+  const pts=[new THREE.Vector2(0,0)],n=10;
+  for(let i=0;i<=n;i++){const t=i/n,r=t<.35?r0+(rm-r0)*(t/.35):rm+(r1-rm)*((t-.35)/.65);pts.push(new THREE.Vector2(r,len*(.04+.92*t)));}
+  pts.push(new THREE.Vector2(0,len));return new THREE.LatheGeometry(pts,18);}
+function trapGeo(wTop,wBot,h,d){ /* beveled box, wider at one end: X side, Y up, Z forward, centred */
+  const s=new THREE.Shape();s.moveTo(-wBot/2,-h/2);s.lineTo(wBot/2,-h/2);s.lineTo(wTop/2,h/2);s.lineTo(-wTop/2,h/2);s.closePath();
+  const b=.02,geo=new THREE.ExtrudeGeometry(s,{depth:d-2*b,bevelEnabled:true,bevelSize:b,bevelThickness:b,bevelSegments:3});geo.translate(0,0,-(d-2*b)/2);return geo;}
+function footGeo(d,w,ha,ht){ /* wedge: X from ankle to toe joint, Y up, Z side */
+  const s=new THREE.Shape();s.moveTo(-.04,-ha*.95);s.lineTo(d+.004,-ht);s.lineTo(d+.004,.008);s.lineTo(.035,.034);s.lineTo(-.025,.03);s.lineTo(-.048,-.012);s.closePath();
+  const b=.008,geo=new THREE.ExtrudeGeometry(s,{depth:w-2*b,bevelEnabled:true,bevelSize:b,bevelThickness:b,bevelSegments:2});geo.translate(0,0,-(w-2*b)/2);return geo;}
+/* Props were not recorded. They are drawn from the hands: a long gun runs from the right hand to the left, a handgun sits in both. */
+const PROPS={l_aiming1_subject1:"rifle",l_aiming2_subject3:"pistol",s_swat:"rifle"};
+function palm(J,p,out){ /* middle of the hand: 7 cm past the wrist, along the hand if it was recorded, else along the forearm */
+  const d=J.handEnd>=0&&p[J.handEnd].distanceToSquared(p[J.wr])>4e-4?_d.copy(p[J.handEnd]).sub(p[J.wr]):_d.copy(p[J.wr]).sub(p[J.elb]);
+  return out.copy(p[J.wr]).addScaledVector(d.normalize(),.07);}
+const DOT=(()=>{const g=new THREE.CircleGeometry(.05,20);g.rotateX(-Math.PI/2);return g;})();
+
+class Lane{
+  constructor(){
+    this.group=new THREE.Group();scene.add(this.group);
+    this.fig=new THREE.Group();this.group.add(this.fig);
+    this.clip=null;this.t=0;this.pts=[];this.root={x:0,z:0,c:1,s:0};this.headTop=V3();
+    this.floorMat=new THREE.ShaderMaterial({transparent:true,depthWrite:false,extensions:{derivatives:true},
+      uniforms:{uRoot:{value:new THREE.Vector2()},uC:{value:1},uS:{value:0},uRad:{value:2.3},uCol:{value:new THREE.Color()},uFill:{value:new THREE.Color()}},
+      vertexShader:"varying vec3 vP;void main(){vP=position;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}",
+      fragmentShader:"uniform vec2 uRoot;uniform float uC,uS,uRad;uniform vec3 uCol,uFill;varying vec3 vP;"+
+        "float ln(float c,float sp,float w){float f=abs(fract(c/sp+.5)-.5)*sp;float d=fwidth(c)*w;return 1.-smoothstep(0.,d,f);}"+
+        "void main(){vec2 w=vec2(vP.x*uC+vP.z*uS,-vP.x*uS+vP.z*uC)+uRoot;float fade=1.-smoothstep(uRad*.6,uRad,length(vP.xz));"+
+        "float mi=max(ln(w.x,.25,1.),ln(w.y,.25,1.))*.3;float ma=max(ln(w.x,1.,1.8),ln(w.y,1.,1.8));"+
+        "float l=max(mi,ma);gl_FragColor=vec4(mix(uFill,uCol,l),max(.55,l)*fade);}"});
+    this.floor=new THREE.Mesh(new THREE.PlaneGeometry(1,1),this.floorMat);this.group.add(this.floor);
+    this.shadow=new THREE.Mesh(new THREE.PlaneGeometry(1,1),new THREE.ShadowMaterial({opacity:.45}));
+    this.shadow.receiveShadow=true;this.shadow.position.y=.002;this.group.add(this.shadow);
+    this.markMats=[null,new THREE.MeshBasicMaterial({transparent:true,opacity:.6,depthWrite:false}),new THREE.MeshBasicMaterial({transparent:true,opacity:.6,depthWrite:false})];
+    this.marks=new THREE.Group();this.group.add(this.marks);
+    this.trailN=240;this.trails=[0,1].map(()=>{const geo=new THREE.BufferGeometry();geo.setAttribute("position",new THREE.BufferAttribute(new Float32Array(this.trailN*3),3));
+      const line=new THREE.Line(geo,new THREE.LineBasicMaterial({transparent:true,opacity:.9}));line.frustumCulled=false;this.group.add(line);return {line,pts:[]};});
+    this.setRadius(2.3);this.onStrike=null;
+  }
+  setRadius(r){
+    this.rad=r;
+    for(const m of [this.floor,this.shadow]){m.geometry.dispose();m.geometry=new THREE.CircleGeometry(r,48);m.geometry.rotateX(-Math.PI/2);}
+    this.floorMat.uniforms.uRad.value=r;
+  }
+  clearTrails(){for(const t of this.trails)t.pts.length=0;}
+  setClip(c){
+    this.clip=c;this.t=0;this.clearTrails();
+    this.fig.traverse(m=>{if(m.geometry&&m.geometry!==SPH)m.geometry.dispose();});
+    for(const m of [...this.fig.children])this.fig.remove(m);
+    for(const m of [...this.marks.children])this.marks.remove(m);
+    this.pts=c.names.map(()=>V3());
+    /* Artist's mannequin built on the recorded joints: box ribcage and pelvis, tapered limbs, ball joints, wedge feet. */
+    const N=c.names,ix=(...a)=>{for(const n of a){const i=N.indexOf(n);if(i>=0)return i;}return -1;},kid=j=>c.parents.indexOf(j);
+    const p0=j=>V3(c.P[j*3]/1000,c.P[j*3+1]/1000,c.P[j*3+2]/1000),d0=(a,b)=>p0(a).distanceTo(p0(b));
+    const add=(geo,mat,parent)=>{const m=new THREE.Mesh(geo,mat);m.castShadow=true;(parent||this.fig).add(m);return m;};
+    const minY=j=>{let v=1e9;for(let f=0;f<c.n;f+=2)v=Math.min(v,c.P[(f*c.J+j)*3+1]);return v/1000;};
+    const g=this.rig={limbs:[],balls:[],feet:[],hands:[],neck:ix("Neck"),head:c.head,headEnd:c.headEnd,nose:N.indexOf("Nose"),chain:[]};
+    for(let j=g.neck;j>=0;j=c.parents[j])g.chain.unshift(j);
+    g.spineLen=0;for(let i=0;i<g.chain.length-1;i++)g.spineLen+=d0(g.chain[i],g.chain[i+1]);
+    const limb=(a,b,r0,rm,r1,mat)=>{const len=d0(a,b);if(len>.02)g.limbs.push({mesh:add(limbGeo(len,r0,rm,r1),mat),a,b});};
+    const ball=(j,r,mat)=>{const m=add(SPH,mat);m.scale.setScalar(r);g.balls.push({mesh:m,j});};
+    [["Left",1],["Right",2]].forEach(([s,k])=>{
+      const J={hip:ix(s+"UpLeg",s+"Hip"),knee:ix(s+"Leg",s+"Knee"),ank:ix(s+"Foot",s+"Ankle"),toe:ix(s+"ToeBase",s+"Toe"),
+        sh:ix(s+"Arm",s+"Shoulder"),elb:ix(s+"ForeArm",s+"Elbow"),wr:ix(s+"Hand",s+"Wrist")};
+      J.toeEnd=kid(J.toe);J.handEnd=kid(J.wr);g[s]=J;const m=mats[k];
+      limb(J.hip,J.knee,.08,.074,.054,m);limb(J.knee,J.ank,.052,.058,.036,m);
+      limb(J.sh,J.elb,.05,.047,.037,m);limb(J.elb,J.wr,.039,.041,.028,m);
+      ball(J.knee,.054,mats[4]);ball(J.ank,.038,mats[4]);ball(J.sh,.056,mats[4]);ball(J.elb,.041,mats[4]);ball(J.wr,.03,mats[4]);
+      const d=d0(J.ank,J.toe),ha=clamp(minY(J.ank),.05,.09),ht=clamp(minY(J.toe),.015,.04),tl=J.toeEnd>=0?clamp(d0(J.toe,J.toeEnd),.035,.07):.05;
+      const tg=new THREE.BoxGeometry(tl,.008+ht,.078);tg.translate(tl/2,(.008-ht)/2,0);
+      g.feet.push({J,foot:add(footGeo(d,.08,ha,ht),m),toe:add(tg,m)});
+      const hand=add(SPH,m);hand.scale.set(.03,.058,.03);g.hands.push({J,mesh:hand});
+    });
+    const shW=d0(g.Left.sh,g.Right.sh),hipW=d0(g.Left.hip,g.Right.hip),ribH=g.spineLen*.55,wTop=Math.max(.26,shW-.02);
+    g.rib=add(trapGeo(wTop,wTop*.7,ribH,.2),mats[0]);add(new THREE.BoxGeometry(.014,ribH*.7,.006),mats[3],g.rib).position.z=.101;
+    g.pelvis=add(trapGeo(hipW+.1,hipW+.05,.15,.17),mats[0]);add(new THREE.BoxGeometry(.014,.09,.006),mats[3],g.pelvis).position.z=.086;
+    g.belly=add(SPH,mats[4]);g.belly.scale.set(.092,.085,.078);
+    limb(g.neck,g.head,.044,.04,.038,mats[0]);
+    g.headGroup=new THREE.Group();this.fig.add(g.headGroup);
+    add(SPH,mats[0],g.headGroup).scale.set(.084,Math.max(.118,d0(g.head,g.headEnd)*.62),.104);
+    add(new THREE.BoxGeometry(.118,.03,.05),mats[3],g.headGroup).position.set(0,.014,.076);
+    add(new THREE.BoxGeometry(.024,.04,.03),mats[0],g.headGroup).position.set(0,-.022,.098);
+    g.prop=null;const kind=PROPS[c.id];
+    if(kind){ /* local frame: X toward the muzzle, Y up, origin in the trigger hand */
+      const pg=new THREE.Group(),box=(l,h,w,x,y,rz)=>{const m=add(new THREE.BoxGeometry(l,h,w),mats[5],pg);m.position.set(x,y,0);m.rotation.z=rz||0;};
+      if(kind==="rifle"){ /* one direction per frame from hand to hand; frames where the hands are not a rifle's width apart take the last good one */
+        const n=c.n,raw=new Float32Array(n*3),ok=new Uint8Array(n),q=this.pts,ds=[];
+        for(let f=0;f<n;f++){const o=f*c.J*3;
+          for(const s of [g.Left,g.Right])for(const j of [s.elb,s.wr,s.handEnd])if(j>=0)q[j].set(c.P[o+j*3],c.P[o+j*3+1],c.P[o+j*3+2]).multiplyScalar(.001);
+          palm(g.Right,q,_a);palm(g.Left,q,_b).sub(_a);const d=_b.length();
+          if(d>.2&&d<.7){ok[f]=1;raw[f*3]=_b.x/d;raw[f*3+1]=_b.y/d;raw[f*3+2]=_b.z/d;ds.push(d);}}
+        if(ds.length){
+          let last=ok.indexOf(1);
+          for(let f=0;f<n;f++){if(ok[f])last=f;else for(let k=0;k<3;k++)raw[f*3+k]=raw[last*3+k];}
+          const ax=pg.ax=new Float32Array(n*3);
+          for(let f=0;f<n;f++)for(let k=0;k<3;k++){let s=0;for(let i=-2;i<=2;i++)s+=raw[clamp(f+i,0,n-1)*3+k];ax[f*3+k]=s;}
+          ds.sort((x,y)=>x-y);const reach=clamp(ds[Math.floor(ds.length*.9)]+.07,.4,.6); /* the handguard reaches the support hand */
+          box(.22,.06,.042,.045,.05);box(reach-.15,.046,.046,(reach+.15)/2,.05);
+          const br=add(new THREE.CylinderGeometry(.011,.011,.13,10),mats[5],pg);br.rotation.z=Math.PI/2;br.position.set(reach+.065,.052,0);
+          box(.21,.05,.034,-.165,.042);box(.028,.115,.04,-.282,.02);box(.04,.1,.034,-.012,-.012,-.3);box(.05,.15,.026,.115,-.05,.15);box(.09,.028,.028,.05,.094);
+          pg.okShare=ds.length/n;g.prop=pg;}
+      }else{box(.19,.034,.03,.05,.058);box(.042,.115,.028,-.028,-.004,-.2);box(.05,.012,.016,.03,.018);g.prop=pg;}
+      if(g.prop){pg.kind=kind;this.fig.add(pg);}
+    }
+    this.markList=c.marks.map(k=>{const m=new THREE.Mesh(DOT,this.markMats[k.side]);m.position.y=.004;this.marks.add(m);return {m,k};});
+  }
+  toLocal(wx,wz,out){const r=this.root,dx=wx-r.x,dz=wz-r.z;out.x=dx*r.c-dz*r.s;out.z=dx*r.s+dz*r.c;return out;}
+  update(sdt){
+    const c=this.clip;if(!c||sdt<=0)return;
+    const prev=this.t;this.t+=sdt*c.fps;
+    if(this.t>=c.n-1){this.t=0;this.clearTrails();return;}
+    if(this.onStrike)for(const k of c.marks)if(k.start>prev&&k.start<=this.t)this.onStrike(k.side);
+    this.record=true;
+  }
+  seek(frac){const c=this.clip;if(!c)return;this.t=clamp(frac,0,1)*(c.n-1.001);this.clearTrails();}
+  pose(){
+    const c=this.clip;if(!c)return;
+    const f0=Math.floor(this.t),f1=Math.min(c.n-1,f0+1),a=this.t-f0,J=c.J,P=c.P,o0=f0*J*3,o1=f1*J*3;
+    for(let j=0;j<J;j++){const i=j*3;this.pts[j].set((P[o0+i]*(1-a)+P[o1+i]*a)/1000,(P[o0+i+1]*(1-a)+P[o1+i+1]*a)/1000,(P[o0+i+2]*(1-a)+P[o1+i+2]*a)/1000);}
+    const R=c.R,h=R[f0*3+2]*(1-a)+R[f1*3+2]*a,r=this.root;
+    r.x=R[f0*3]*(1-a)+R[f1*3]*a;r.z=R[f0*3+1]*(1-a)+R[f1*3+1]*a;r.c=Math.cos(h);r.s=Math.sin(h);
+    const p=this.pts,g=this.rig,L=g.Left,Rt=g.Right;
+    for(const l of g.limbs)placeFrom(l.mesh,p[l.a],p[l.b]);
+    for(const b of g.balls)b.mesh.position.copy(p[b.j]);
+    const along=(f,out)=>{let d=f*g.spineLen;const ch=g.chain;
+      for(let i=0;i<ch.length-1;i++){const A=p[ch[i]],B=p[ch[i+1]],len=A.distanceTo(B);
+        if(d<=len||i===ch.length-2)return out.copy(A).lerp(B,len>1e-6?Math.min(1,d/len):0);d-=len;}
+      return out.copy(p[ch[0]]);};
+    const hm=_a.copy(p[L.hip]).add(p[Rt.hip]).multiplyScalar(.5),up=along(.3,_b).sub(hm);
+    g.pelvis.quaternion.copy(frameQ(_c.copy(p[L.hip]).sub(p[Rt.hip]),up));g.pelvis.position.copy(hm).addScaledVector(up.normalize(),.03);
+    along(.27,g.belly.position);
+    const lo=along(.38,_a),hi=along(.93,_e);
+    g.rib.quaternion.copy(frameQ(_c.copy(p[L.sh]).sub(p[Rt.sh]),_b.copy(hi).sub(lo)));g.rib.position.copy(lo).add(hi).multiplyScalar(.5);
+    const hc=g.headGroup.position.copy(p[g.head]).add(p[g.headEnd]).multiplyScalar(.5),hu=_a.copy(p[g.headEnd]).sub(p[g.head]);
+    g.headGroup.quaternion.copy(frameQ(_c.crossVectors(hu,_b.copy(p[g.nose]).sub(hc)),hu));this.headTop.copy(p[g.headEnd]);
+    for(const f of g.feet){const J=f.J,sh=_a.copy(p[J.knee]).sub(p[J.ank]);
+      f.foot.position.copy(p[J.ank]);f.foot.quaternion.copy(basisQ(_b.copy(p[J.toe]).sub(p[J.ank]),sh));
+      f.toe.position.copy(p[J.toe]);f.toe.quaternion.copy(J.toeEnd>=0&&p[J.toeEnd].distanceToSquared(p[J.toe])>1e-4?basisQ(_b.copy(p[J.toeEnd]).sub(p[J.toe]),sh):f.foot.quaternion);}
+    for(const h of g.hands){const J=h.J,dir=J.handEnd>=0&&p[J.handEnd].distanceToSquared(p[J.wr])>4e-4?_a.copy(p[J.handEnd]).sub(p[J.wr]):_a.copy(p[J.wr]).sub(p[J.elb]);
+      dir.normalize();h.mesh.position.copy(p[J.wr]).addScaledVector(dir,.055);h.mesh.quaternion.setFromUnitVectors(Y,dir);}
+    if(g.prop){const pg=g.prop;pg.visible=state.props;
+      if(pg.kind==="rifle"){const A=pg.ax,i0=f0*3,i1=f1*3;
+        _c.set(A[i0]*(1-a)+A[i1]*a,A[i0+1]*(1-a)+A[i1+1]*a,A[i0+2]*(1-a)+A[i1+2]*a);palm(Rt,p,pg.position);}
+      else{palm(Rt,p,_a);palm(L,p,_b);pg.position.copy(_a).lerp(_b,.5*(1-clamp((_a.distanceTo(_b)-.2)/.1,0,1))); /* in both hands, or the right one if they part */
+        _c.copy(pg.position).sub(_e.copy(p[L.sh]).add(p[Rt.sh]).multiplyScalar(.5));} /* points away from the chest */
+      pg.quaternion.copy(basisQ(_c,Y));}
+    const u=this.floorMat.uniforms;u.uRoot.value.set(r.x,r.z);u.uC.value=r.c;u.uS.value=r.s;
+    const rr=this.rad*this.rad*.8;
+    for(const {m,k} of this.markList){this.toLocal(k.x,k.z,m.position);m.visible=state.prints&&k.start<=this.t&&m.position.x*m.position.x+m.position.z*m.position.z<rr;}
+    if(this.record){
+      const src=[this.headTop,this.pts[c.hand]];
+      this.trails.forEach((tr,i)=>{const l=src[i];tr.pts.push(l.x*r.c+l.z*r.s+r.x,l.y,-l.x*r.s+l.z*r.c+r.z);if(tr.pts.length>this.trailN*3)tr.pts.splice(0,3);});
+      this.record=false;
+    }
+    const tmp=V3();
+    this.trails.forEach(tr=>{
+      const arr=tr.line.geometry.attributes.position.array;let n=0;
+      for(let i=0;i<tr.pts.length;i+=3){this.toLocal(tr.pts[i],tr.pts[i+2],tmp);if(tmp.x*tmp.x+tmp.z*tmp.z>rr)continue;arr[n*3]=tmp.x;arr[n*3+1]=tr.pts[i+1];arr[n*3+2]=tmp.z;n++;}
+      tr.line.geometry.setDrawRange(0,n);tr.line.geometry.attributes.position.needsUpdate=true;tr.line.visible=state.trails&&n>1;});
+  }
+}
+
+/* ---------- State, theme ---------- */
+const state={playing:!matchMedia("(prefers-reduced-motion: reduce)").matches,speed:1,prints:true,trails:false,sound:false,props:true,group:"",clip:"",ready:false};
+const lanes=[new Lane(),new Lane()];lanes[1].group.visible=false;
+let CLIPS=[],BYID={},tok={};
+function readTokens(){
+  const cs=getComputedStyle(document.documentElement),g=n=>cs.getPropertyValue(n).trim();
+  tok={stage:g("--stage"),floor:g("--floor"),floorLine:g("--floor-line"),ink:g("--ink"),muted:g("--muted"),line:g("--line"),
+    accent:g("--accent"),left:g("--left"),right:g("--right"),clay:g("--clay")};
+  scene.background=new THREE.Color(tok.stage);
+  const clay=new THREE.Color(tok.clay);
+  mats[0].color.copy(clay);mats[1].color.copy(clay).lerp(new THREE.Color(tok.left),.24);mats[2].color.copy(clay).lerp(new THREE.Color(tok.right),.24);
+  mats[3].color.copy(clay).multiplyScalar(.35);mats[4].color.copy(clay).multiplyScalar(.62);mats[5].color.copy(clay).multiplyScalar(.45);
+  for(const l of lanes){l.floorMat.uniforms.uCol.value.set(tok.floorLine);l.floorMat.uniforms.uFill.value.set(tok.floor);
+    l.markMats[1].color.set(tok.left);l.markMats[2].color.set(tok.right);
+    l.trails[0].line.material.color.set(tok.accent);l.trails[1].line.material.color.set(tok.muted);}
+  drawChart();
+}
+
+/* ---------- Camera ---------- */
+const VIEWS={side:{az:0,el:9},front:{az:90,el:8},three:{az:42,el:16},top:{az:0,el:82}};
+const cam={az:0,el:9,r:4.6,taz:0,tel:9,tr:4.6,target:V3(0,.88,0)};
+function setView(v){cam.taz=VIEWS[v].az;cam.tel=VIEWS[v].el;
+  document.querySelectorAll("[data-view]").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.view===v)));}
+function updateCamera(dt){
+  const k=1-Math.exp(-dt*6);cam.az+=(cam.taz-cam.az)*k;cam.el+=(cam.tel-cam.el)*k;cam.r+=(cam.tr-cam.r)*k;
+  const a=cam.az*DEG,e=cam.el*DEG;
+  camera.position.set(cam.target.x+cam.r*Math.cos(e)*Math.sin(a),cam.target.y+cam.r*Math.sin(e),cam.target.z+cam.r*Math.cos(e)*Math.cos(a));
+  camera.lookAt(cam.target);
+}
+let drag=null;
+canvas.addEventListener("pointerdown",e=>{drag={x:e.clientX,y:e.clientY,id:e.pointerId};});
+window.addEventListener("pointermove",e=>{if(!drag||e.pointerId!==drag.id)return;
+  const dx=e.clientX-drag.x,dy=e.clientY-drag.y;if(Math.abs(dx)+Math.abs(dy)<2)return;
+  if(!drag.moved){drag.moved=true;canvas.setPointerCapture&&canvas.setPointerCapture(e.pointerId);
+    document.querySelectorAll("[data-view]").forEach(b=>b.setAttribute("aria-pressed","false"));}
+  cam.taz-=dx*.35;cam.tel=clamp(cam.tel+dy*.25,-4,85);drag.x=e.clientX;drag.y=e.clientY;});
+window.addEventListener("pointerup",()=>{drag=null;});
+
+/* ---------- Footfall timeline ---------- */
+const gc=document.getElementById("gait"),g2=gc.getContext("2d"),CL=26,CR=8;
+function drawChart(){
+  const dpr=Math.min(2,window.devicePixelRatio||1),w=gc.clientWidth,h=gc.clientHeight,c=lanes[0].clip;
+  if(!w||!tok.ink)return;
+  if(gc.width!==Math.round(w*dpr)||gc.height!==Math.round(h*dpr)){gc.width=Math.round(w*dpr);gc.height=Math.round(h*dpr);}
+  g2.setTransform(dpr,0,0,dpr,0,0);g2.clearRect(0,0,w,h);if(!c)return;
+  const X=v=>CL+(w-CR-CL)*v,rows=[{y:8,lab:"L",col:tok.left,list:c.contacts.L},{y:44,lab:"R",col:tok.right,list:c.contacts.R}],rh=26,n=c.n-1;
+  g2.font="500 12px 'IBM Plex Mono', ui-monospace, monospace";g2.textBaseline="middle";g2.textAlign="left";
+  for(const r of rows){
+    g2.fillStyle=r.col;g2.fillText(r.lab,4,r.y+rh/2);
+    g2.strokeStyle=tok.line;g2.lineWidth=1;g2.strokeRect(X(0)+.5,r.y+.5,X(1)-X(0)-1,rh-1);
+    for(const [a,b] of r.list)g2.fillRect(X(a/n),r.y+3,Math.max(1.5,X(Math.min(b,n)/n)-X(a/n)),rh-6);
+  }
+  g2.fillStyle=tok.muted;g2.font="400 12px 'IBM Plex Sans', Arial, sans-serif";g2.textBaseline="top";
+  const secs=n/c.fps,step=secs>10?2:1;
+  for(let s=0;s<=secs+.01;s+=step){const x=X(s/secs);g2.fillRect(x-.5,rows[1].y+rh+4,1,4);
+    g2.textAlign=s===0?"left":"center";g2.fillText(s+" s",x,rows[1].y+rh+10);}
+  const px=X(lanes[0].t/n);g2.fillStyle=tok.ink;g2.fillRect(px-1,2,2,rows[1].y+rh+4);
+}
+function chartScrub(e){const r=gc.getBoundingClientRect(),v=clamp((e.clientX-r.left-CL)/(r.width-CR-CL),0,1);
+  setPlaying(false);lanes[0].seek(v);
+  if(lanes[1].group.visible&&lanes[1].clip){const s=v*(lanes[0].clip.n-1)/lanes[1].clip.n;lanes[1].seek(s%1);}}
+let chartDrag=false;
+gc.addEventListener("pointerdown",e=>{if(!state.ready)return;chartDrag=true;gc.setPointerCapture(e.pointerId);chartScrub(e);});
+gc.addEventListener("pointermove",e=>{if(chartDrag)chartScrub(e);});
+gc.addEventListener("pointerup",()=>{chartDrag=false;});
+
+/* ---------- Sound ---------- */
+let actx=null;
+function click(side){if(!state.sound||!actx)return;
+  const o=actx.createOscillator(),g=actx.createGain(),t=actx.currentTime;
+  o.frequency.value=side===1?520:740;o.type="triangle";g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(.25,t+.005);
+  g.gain.exponentialRampToValueAtTime(.0001,t+.08);o.connect(g).connect(actx.destination);o.start(t);o.stop(t+.1);}
+lanes[0].onStrike=click;
+
+/* ---------- UI ---------- */
+const groupList=document.getElementById("groupList"),clipList=document.getElementById("clipList"),cmp=document.getElementById("cmp");
+function esc(s){const d=document.createElement("div");d.textContent=s;return d.innerHTML;}
+function renderNotes(){
+  const G=GROUPS[state.group],c=BYID[state.clip];
+  document.getElementById("notes").innerHTML="<h2>What to copy: "+esc(G.name)+"</h2><p class=\"lede\">"+esc(G.lede)+"</p><dl class=\"cues\">"+
+    G.cues.map(q=>"<dt>"+esc(q[0])+"</dt><dd>"+esc(q[1])+"</dd>").join("")+"</dl><h3>Watch out for</h3><p>"+esc(G.watch)+"</p><h3>Practice</h3><p>"+esc(G.practice)+"</p>"+
+    "<h3>This take</h3><p class=\"credit\">"+esc(c.source)+". Starts "+c.metrics.src_start+" s into the original recording."+
+    (c.source.startsWith("Ubisoft")?" Non-commercial, no derivatives: keep this page private.":"")+"</p>";
+}
+function renderMetrics(){
+  const m=BYID[state.clip].metrics;
+  const rows=[["Speed",m.speed.toFixed(1)+" km/h"],["Cadence",m.cadence?m.cadence+" steps/min":"not measured"],
+    ["Step length",m.step?m.step+" cm":"not measured"],["Distance covered",m.dist.toFixed(1)+" m"],["Take length",m.secs.toFixed(1)+" s"]];
+  document.getElementById("metrics").innerHTML=rows.map(r=>"<div><dt>"+r[0]+"</dt><dd>"+esc(r[1])+"</dd></div>").join("");
+}
+function selectClip(id){
+  const c=BYID[id];state.clip=id;lanes[0].setClip(c);
+  clipList.querySelectorAll(".clip-btn").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.clip===id)));
+  renderNotes();renderMetrics();syncProps();
+  try{localStorage.setItem("walk-clip",id);}catch(e){}
+}
+function selectGroup(k,clipId){
+  state.group=k;
+  groupList.querySelectorAll(".style-btn").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.group===k)));
+  clipList.innerHTML="";
+  const list=CLIPS.filter(c=>c.group===k);
+  for(const c of list){
+    const b=document.createElement("button");b.type="button";b.className="clip-btn";b.dataset.clip=c.id;
+    b.innerHTML="<b></b><span></span>";b.firstChild.textContent=c.label;b.lastChild.textContent=srcTag(c.source);
+    b.firstChild.style.fontWeight="400";
+    b.addEventListener("click",()=>selectClip(c.id));clipList.appendChild(b);
+  }
+  selectClip(clipId&&BYID[clipId]&&BYID[clipId].group===k?clipId:list[0].id);
+}
+function setCompare(id){
+  const on=!!id;lanes[1].group.visible=on;
+  if(on){lanes[1].setClip(BYID[id]);}
+  lanes[0].group.position.set(on?-1.05:0,0,on?.55:0);lanes[1].group.position.set(1.05,0,-.55);
+  for(const l of lanes)l.setRadius(on?1.15:2.3);
+  cam.tr=on?6.4:4.6;tags.hidden=!on;syncProps();
+}
+function setPlaying(p){state.playing=p;document.getElementById("play").textContent=p?"Pause":"Play";}
+document.getElementById("play").addEventListener("click",()=>{setPlaying(!state.playing);});
+document.querySelectorAll("[data-speed]").forEach(b=>b.addEventListener("click",()=>{state.speed=+b.dataset.speed;
+  document.querySelectorAll("[data-speed]").forEach(x=>x.setAttribute("aria-pressed",String(x===b)));}));
+document.querySelectorAll("[data-view]").forEach(b=>b.addEventListener("click",()=>setView(b.dataset.view)));
+document.getElementById("fp").addEventListener("change",e=>{state.prints=e.target.checked;});
+document.getElementById("tr").addEventListener("change",e=>{state.trails=e.target.checked;for(const l of lanes)l.clearTrails();});
+document.getElementById("snd").addEventListener("change",e=>{state.sound=e.target.checked;
+  if(state.sound&&!actx){try{actx=new (window.AudioContext||window.webkitAudioContext)();}catch(err){}}
+  if(actx&&actx.state==="suspended")actx.resume();});
+const prEl=document.getElementById("pr");
+prEl.addEventListener("change",e=>{state.props=e.target.checked;});
+function syncProps(){const has=lanes.some(l=>l.group.visible&&l.rig&&l.rig.prop);prEl.disabled=!has;prEl.parentNode.classList.toggle("off",!has);}
+cmp.addEventListener("change",()=>{if(state.ready)setCompare(cmp.value);});
+window.addEventListener("keydown",e=>{
+  if(!state.ready||(e.target.closest&&e.target.closest("select,input,button")))return;
+  if(e.code==="Space"){e.preventDefault();setPlaying(!state.playing);}
+  if(!state.playing&&(e.code==="ArrowRight"||e.code==="ArrowLeft")){e.preventDefault();
+    const d=e.code==="ArrowRight"?1:-1;for(const l of lanes)if(l.clip){l.t=clamp(Math.round(l.t)+d,0,l.clip.n-2);l.clearTrails();}}
+});
+const tags=document.getElementById("tags");tags.hidden=true;
+const tagEls=lanes.map(()=>{const d=document.createElement("div");d.className="tag";tags.appendChild(d);return d;});
+function updateTags(){
+  if(tags.hidden)return;const w=stageEl.clientWidth,h=stageEl.clientHeight;
+  lanes.forEach((l,i)=>{if(!l.clip)return;const p=l.headTop.clone().add(V3(0,.12,0));l.group.localToWorld(p);p.project(camera);
+    tagEls[i].textContent=l.clip.label;tagEls[i].style.left=((p.x+1)/2*w)+"px";tagEls[i].style.top=((1-p.y)/2*h)+"px";});
+}
+
+/* ---------- Resize, theme, loop ---------- */
+function resize(){const w=stageEl.clientWidth,h=stageEl.clientHeight;if(!w||!h)return;
+  renderer.setSize(w,h,false);camera.aspect=w/h;camera.fov=w/h<1.2?40:32;camera.updateProjectionMatrix();drawChart();}
+new ResizeObserver(resize).observe(stageEl);
+new ResizeObserver(()=>drawChart()).observe(gc);
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change",readTokens);
+new MutationObserver(readTokens).observe(document.documentElement,{attributes:true,attributeFilter:["data-theme"]});
+readTokens();setPlaying(state.playing);setView("side");resize();
+let last=performance.now();
+function frame(now){
+  const dt=Math.min(.05,(now-last)/1000);last=now;
+  if(document.hidden){requestAnimationFrame(frame);return;}
+  const sdt=state.playing?dt*state.speed:0;
+  for(const l of lanes){if(!l.group.visible||!l.clip)continue;l.update(sdt);l.pose();}
+  updateCamera(dt);renderer.render(scene,camera);drawChart();updateTags();
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+
+/* ---------- Load the recorded clips ---------- */
+/* clips.ubisoft.json holds the two Ubisoft takes. Their licence forbids sharing converted copies, so the file is optional and never in the public repository. */
+function loadClips(){Promise.all([fetch("clips.json").then(r=>{if(!r.ok)throw new Error("HTTP "+r.status);return r.json();}),
+  fetch("clips.ubisoft.json").then(r=>r.ok?r.json():{clips:[]}).catch(()=>({clips:[]}))]).then(([data,extra])=>{
+  CLIPS=extra.clips.concat(data.clips);
+  if(extra.clips.length)GROUPS.operator.lede=GROUPS.operator.ledeUbisoft;
+  for(const c of CLIPS){
+    c.P=new Int16Array(b64(c.pos));c.R=new Float32Array(b64(c.root));c.J=c.names.length;delete c.pos;delete c.root;BYID[c.id]=c;
+    const ank=s=>c.names.findIndex(n=>n===s+"Ankle"||n===s+"Foot");
+    c.marks=[];
+    [["L",1,ank("Left")],["R",2,ank("Right")]].forEach(([key,side,j])=>{
+      for(const [a,b] of c.contacts[key]){const f=Math.min(c.n-1,Math.round((a+b)/2)),o=(f*c.J+j)*3,lx=c.P[o]/1000,lz=c.P[o+2]/1000,
+        h=c.R[f*3+2],co=Math.cos(h),si=Math.sin(h);
+        c.marks.push({side,start:a,x:lx*co+lz*si+c.R[f*3],z:-lx*si+lz*co+c.R[f*3+1]});}});
+  }
+  for(const k of ORDER){
+    const b=document.createElement("button");b.type="button";b.className="style-btn";b.dataset.group=k;
+    b.innerHTML="<strong></strong><span></span>";b.firstChild.textContent=GROUPS[k].name;b.lastChild.textContent=GROUPS[k].short;
+    b.addEventListener("click",()=>selectGroup(k));groupList.appendChild(b);
+    const og=document.createElement("optgroup");og.label=GROUPS[k].name;
+    for(const c of CLIPS.filter(c=>c.group===k)){const o=document.createElement("option");o.value=c.id;o.textContent=c.label;og.appendChild(o);}
+    cmp.appendChild(og);
+  }
+  let start="s_old";try{const s=localStorage.getItem("walk-clip");if(s&&BYID[s])start=s;}catch(e){}
+  state.ready=true;statusEl.remove();selectGroup(BYID[start].group,start);
+}).catch(err=>{
+  statusEl.textContent="The recorded clips could not be loaded ("+err.message+").";
+  const b=document.createElement("button");b.type="button";b.textContent="Try again";
+  b.addEventListener("click",()=>{statusEl.textContent="Loading the recorded clips.";loadClips();});statusEl.appendChild(b);
+});}
+loadClips();
+})();
+</script>
