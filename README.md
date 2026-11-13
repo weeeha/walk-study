@@ -77,6 +77,7 @@ python3 tools/convert.py dl clips.json
 | `tools/get.sh` | Downloads the source recordings |
 | `tools/convert.py` | Converts the recordings into `clips.json` |
 | `docs/screenshot.png` | The picture above |
+| `LICENSE` | MIT licence for the code |
 
 ## Known limits
 
@@ -94,4 +95,6 @@ python3 tools/convert.py dl clips.json
 
 ## Licence
 
-No licence has been chosen for the code yet, so all rights are reserved until one is added. `clips.json` is derived from the two datasets above and stays under their terms: keep the credits with it.
+The code (`walk-study.html` and everything in `tools/`) is under the MIT licence. See [LICENSE](LICENSE).
+
+`clips.json` is not covered by it. It is derived from the two datasets above and stays under their terms: keep the credits with it.
