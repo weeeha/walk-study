@@ -29,6 +29,11 @@ python3 -m http.server 8000
 
 Then open `http://localhost:8000/walk-study.html`. The page loads three.js and its fonts from the network, so it needs a connection.
 
+## Findings
+
+Recorded takes turned out far better to copy from than generated walks, no source records a weapon or an unstable armed person, and two Ubisoft takes had to stay out of the repository.
+The full list, with the reason behind each choice and what is still unchecked, is in [docs/FINDINGS.md](docs/FINDINGS.md).
+
 ## Where the motion comes from
 
 | Source | What it is | Licence | Takes here |
@@ -77,6 +82,7 @@ python3 tools/convert.py dl clips.json
 | `tools/get.sh` | Downloads the source recordings |
 | `tools/convert.py` | Converts the recordings into `clips.json` |
 | `docs/screenshot.png` | The picture above |
+| `docs/FINDINGS.md` | What was found, each decision with its reason, and what is unchecked |
 | `LICENSE` | MIT licence for the code |
 
 ## Known limits
